@@ -8,6 +8,7 @@ const server =  http.createServer((req, res) => {
     const url = req.url;
     const method = req.method;
     if (url === '/') {
+        res.setHeader('Content-Type', 'text/html');
         res.write(`
         <html>
             <head><title>Enter Message</title></head>
@@ -23,20 +24,23 @@ const server =  http.createServer((req, res) => {
 
     if(url === '/message' && method === 'POST') {
         const body = [];
+        // the data event will be fired when a chunk of data is ready to be read from the request
         req.on('data', (chunk) => {
             console.log(chunk);
             body.push(chunk);
         });
-        req.on('end', () => {
+        // the end event will be fired once the incoming request is done being parsed
+        return req.on('end', () => {
             const parsedBody = Buffer.concat(body).toString();
             console.log(parsedBody);
             const message = parsedBody.split('=')[1];
-            fs.writeFileSync('message.txt', message);
+            fs.writeFile('message.txt', message, (err) => {
+                // don't send the response until we're done writing to the file
+                res.statusCode = 302; //indicates redirect
+                res.setHeader('Location', '/');
+                res.end();
+            });
         });
-        
-        res.statusCode = 302; //indicates redirect
-        res.setHeader('Location', '/');
-        return res.end();
     }
 
     res.setHeader('Content-Type', 'text/html');
